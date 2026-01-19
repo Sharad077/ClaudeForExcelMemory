@@ -12,6 +12,11 @@ An open-source tool that automatically captures and persists your Claude for Exc
 - **No Proxy/Certificates**: Uses Windows UI Automation - no network interception required
 - **Privacy First**: All data stays local, nothing sent to external services
 
+## Screenshot
+<img width="360" height="920" alt="image" src="https://github.com/user-attachments/assets/5bfb4680-5ef8-43bc-81e6-e7d63e594bb6" />
+
+
+
 ## Quick Start
 
 ### Download & Run
