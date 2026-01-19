@@ -40,7 +40,6 @@
             <Description resid="GetStarted.Description"/>
             <LearnMoreUrl resid="GetStarted.LearnMoreUrl"/>
           </GetStarted>
-          <FunctionFile resid="Functions.Url"/>
           <ExtensionPoint xsi:type="PrimaryCommandSurface">
             <OfficeTab id="TabHome">
               <Group id="CommandsGroup">
@@ -81,7 +80,6 @@
       </bt:Images>
       <bt:Urls>
         <bt:Url id="GetStarted.LearnMoreUrl" DefaultValue="https://github.com/anthropics/claude-code"/>
-        <bt:Url id="Functions.Url" DefaultValue="https://localhost:3003/functions.html"/>
         <bt:Url id="Taskpane.Url" DefaultValue="https://localhost:3003/taskpane.html"/>
       </bt:Urls>
       <bt:ShortStrings>
