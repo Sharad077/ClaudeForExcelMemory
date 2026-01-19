@@ -1,0 +1,66 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  build:
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Build Capture Service
+        working-directory: capture-service
+        run: |
+          npm install
+          npm run package
+
+      - name: Build Excel Add-in
+        working-directory: excel-addin
+        run: |
+          npm install
+          npm run build
+
+      - name: Create Release Package
+        run: |
+          mkdir release-package
+          copy "capture-service\release\Claude Excel Memory*.exe" release-package\
+          copy excel-addin\manifest.xml release-package\
+          copy README.md release-package\
+
+      - name: Upload Release Artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: claude-excel-memory
+          path: release-package/
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v1
+        with:
+          files: |
+            capture-service/release/Claude Excel Memory*.exe
+            excel-addin/manifest.xml
+          body: |
+            ## Claude for Excel Memory ${{ github.ref_name }}
+
+            ### Download
+            - `Claude Excel Memory X.X.X.exe` - Portable capture service (run from system tray)
+            - `manifest.xml` - Excel add-in manifest (sideload in Excel)
+
+            ### Quick Start
+            1. Download and run the .exe file
+            2. In Excel: Insert → My Add-ins → Upload → select manifest.xml
+            3. Use Claude for Excel - your history is automatically captured!
+
+            See [README](../../blob/main/README.md) for full documentation.
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

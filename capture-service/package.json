@@ -1,0 +1,41 @@
+{
+  "name": "claude-excel-memory-capture",
+  "version": "1.0.0",
+  "description": "UI Automation capture service for Claude for Excel sessions",
+  "main": "dist/main.js",
+  "scripts": {
+    "build": "tsc",
+    "start": "npm run build && electron dist/main.js",
+    "dev": "tsc && electron dist/main.js",
+    "package": "npm run build && electron-builder --win --publish never"
+  },
+  "dependencies": {
+    "cors": "^2.8.5",
+    "express": "^4.21.2",
+    "sql.js": "^1.11.0",
+    "uuid": "^11.0.5"
+  },
+  "devDependencies": {
+    "@types/cors": "^2.8.17",
+    "@types/express": "^5.0.0",
+    "@types/node": "^22.10.7",
+    "@types/uuid": "^10.0.0",
+    "electron": "^34.0.0",
+    "electron-builder": "^25.1.8",
+    "typescript": "^5.7.3"
+  },
+  "build": {
+    "appId": "com.claudeforexcel.memory-capture",
+    "productName": "Claude Excel Memory",
+    "directories": {
+      "output": "release"
+    },
+    "win": {
+      "target": "portable",
+      "signAndEditExecutable": false
+    },
+    "files": [
+      "dist/**/*"
+    ]
+  }
+}
