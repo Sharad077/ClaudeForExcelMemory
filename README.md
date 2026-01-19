@@ -30,7 +30,7 @@ An open-source tool that automatically captures and persists your Claude for Exc
 
 ```bash
 # Clone the repository
-git clone https://github.com/yourusername/claude-excel-memory.git
+git clone https://github.com/Sharad077/ClaudeForExcelMemory.git
 cd claude-excel-memory
 
 # Build capture service
