@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import {
   Stack,
   Text,
@@ -10,6 +10,7 @@ import {
   IconButton,
 } from '@fluentui/react';
 import { CapturedSession } from '../types';
+import { compressConversation } from '../utils/textRank';
 
 interface SessionDetailProps {
   session: CapturedSession | null;
@@ -89,6 +90,33 @@ export const SessionDetail: React.FC<SessionDetailProps> = ({
   onDelete,
   onClose,
 }) => {
+  const [isCompressed, setIsCompressed] = useState(false);
+
+  // Parse and optionally compress messages
+  const messages = useMemo(() => {
+    if (!session) return [];
+
+    try {
+      const data = JSON.parse(session.request_body);
+      if (data.messages && Array.isArray(data.messages) && data.messages.length > 0) {
+        const msgs = data.messages as Array<{ role: 'user' | 'assistant'; content: string }>;
+        return isCompressed ? compressConversation(msgs, 0.3) : msgs;
+      }
+    } catch {
+      // Fall back to user_prompt/assistant_response
+    }
+
+    // Fallback: construct messages from fields
+    const fallbackMsgs: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+    if (session.user_prompt) {
+      fallbackMsgs.push({ role: 'user', content: session.user_prompt });
+    }
+    if (session.assistant_response) {
+      fallbackMsgs.push({ role: 'assistant', content: session.assistant_response });
+    }
+    return isCompressed ? compressConversation(fallbackMsgs, 0.3) : fallbackMsgs;
+  }, [session, isCompressed]);
+
   if (isLoading) {
     return (
       <Stack
@@ -193,6 +221,25 @@ export const SessionDetail: React.FC<SessionDetailProps> = ({
         )}
       </Stack>
 
+      {/* Compression indicator */}
+      {isCompressed && (
+        <Stack
+          horizontal
+          horizontalAlign="center"
+          styles={{
+            root: {
+              padding: '4px 12px',
+              backgroundColor: '#fff4ce',
+              borderBottom: '1px solid #edebe9',
+            },
+          }}
+        >
+          <Text variant="tiny" styles={{ root: { color: '#605e5c' } }}>
+            Compressed view (assistant responses summarized to ~30%)
+          </Text>
+        </Stack>
+      )}
+
       {/* Messages */}
       <Stack
         styles={{
@@ -203,36 +250,15 @@ export const SessionDetail: React.FC<SessionDetailProps> = ({
           },
         }}
       >
-        {(() => {
-          // Try to parse messages from request_body for full conversation
-          try {
-            const data = JSON.parse(session.request_body);
-            if (data.messages && Array.isArray(data.messages) && data.messages.length > 0) {
-              return data.messages.map((msg: { role: 'user' | 'assistant'; content: string }, index: number) => (
-                <MessageBubble key={index} role={msg.role} content={msg.content} />
-              ));
-            }
-          } catch {
-            // Fall back to simple display
-          }
-
-          // Fallback: show user_prompt and assistant_response if no parsed messages
-          return (
-            <>
-              {session.user_prompt && (
-                <MessageBubble role="user" content={session.user_prompt} />
-              )}
-              {session.assistant_response && (
-                <MessageBubble role="assistant" content={session.assistant_response} />
-              )}
-              {!session.user_prompt && !session.assistant_response && (
-                <Text variant="small" styles={{ root: { color: '#605e5c', fontStyle: 'italic' } }}>
-                  No message content available
-                </Text>
-              )}
-            </>
-          );
-        })()}
+        {messages.length > 0 ? (
+          messages.map((msg, index) => (
+            <MessageBubble key={index} role={msg.role} content={msg.content} />
+          ))
+        ) : (
+          <Text variant="small" styles={{ root: { color: '#605e5c', fontStyle: 'italic' } }}>
+            No message content available
+          </Text>
+        )}
       </Stack>
 
       <Separator />
@@ -250,6 +276,11 @@ export const SessionDetail: React.FC<SessionDetailProps> = ({
         {!isSaved && (
           <PrimaryButton text="Save to Workbook" onClick={onSave} />
         )}
+        <DefaultButton
+          text={isCompressed ? 'Expand' : 'Compress'}
+          iconProps={{ iconName: isCompressed ? 'FullScreen' : 'CollapseContent' }}
+          onClick={() => setIsCompressed(!isCompressed)}
+        />
         <DefaultButton
           text="Delete"
           onClick={onDelete}
