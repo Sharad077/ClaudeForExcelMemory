@@ -18,9 +18,13 @@ Thumbs.db
 *.log
 npm-debug.log*
 
-# Environment
+# Environment & Secrets
 .env
-.env.local
+.env.*
+*.env
+secrets.json
+config.local.json
+api-key*
 
 # Temporary files
 *.tmp
