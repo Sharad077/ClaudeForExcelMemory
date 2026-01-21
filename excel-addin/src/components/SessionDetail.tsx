@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import {
   Stack,
   Text,
@@ -8,9 +8,13 @@ import {
   SpinnerSize,
   Separator,
   IconButton,
+  MessageBar,
+  MessageBarType,
 } from '@fluentui/react';
 import { CapturedSession } from '../types';
 import { compressConversation } from '../utils/textRank';
+import { summarizeWithClaude } from '../services/claudeApi';
+import { hasApiKey } from '../utils/settings';
 
 interface SessionDetailProps {
   session: CapturedSession | null;
@@ -82,6 +86,8 @@ const MessageBubble: React.FC<MessageBubbleProps> = ({ role, content }) => {
   );
 };
 
+type Message = { role: 'user' | 'assistant'; content: string };
+
 export const SessionDetail: React.FC<SessionDetailProps> = ({
   session,
   isLoading,
@@ -91,31 +97,74 @@ export const SessionDetail: React.FC<SessionDetailProps> = ({
   onClose,
 }) => {
   const [isCompressed, setIsCompressed] = useState(false);
+  const [isCompressing, setIsCompressing] = useState(false);
+  const [compressedMessages, setCompressedMessages] = useState<Message[] | null>(null);
+  const [compressionMethod, setCompressionMethod] = useState<'claude' | 'textrank' | null>(null);
+  const [compressionError, setCompressionError] = useState<string | null>(null);
 
-  // Parse and optionally compress messages
-  const messages = useMemo(() => {
+  // Parse original messages from session
+  const originalMessages = useMemo((): Message[] => {
     if (!session) return [];
 
     try {
       const data = JSON.parse(session.request_body);
       if (data.messages && Array.isArray(data.messages) && data.messages.length > 0) {
-        const msgs = data.messages as Array<{ role: 'user' | 'assistant'; content: string }>;
-        return isCompressed ? compressConversation(msgs, 0.3) : msgs;
+        return data.messages as Message[];
       }
     } catch {
       // Fall back to user_prompt/assistant_response
     }
 
     // Fallback: construct messages from fields
-    const fallbackMsgs: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+    const fallbackMsgs: Message[] = [];
     if (session.user_prompt) {
       fallbackMsgs.push({ role: 'user', content: session.user_prompt });
     }
     if (session.assistant_response) {
       fallbackMsgs.push({ role: 'assistant', content: session.assistant_response });
     }
-    return isCompressed ? compressConversation(fallbackMsgs, 0.3) : fallbackMsgs;
-  }, [session, isCompressed]);
+    return fallbackMsgs;
+  }, [session]);
+
+  // Handle compression toggle
+  const handleCompress = useCallback(async () => {
+    if (isCompressed) {
+      // Expand - just toggle off
+      setIsCompressed(false);
+      setCompressedMessages(null);
+      setCompressionMethod(null);
+      setCompressionError(null);
+      return;
+    }
+
+    // Compress
+    setIsCompressing(true);
+    setCompressionError(null);
+
+    // Try Claude API first if API key is configured
+    if (hasApiKey()) {
+      const claudeResult = await summarizeWithClaude(originalMessages);
+      if (claudeResult) {
+        setCompressedMessages(claudeResult);
+        setCompressionMethod('claude');
+        setIsCompressed(true);
+        setIsCompressing(false);
+        return;
+      }
+      // Claude API failed, fall through to TextRank
+      setCompressionError('Claude API failed, using TextRank fallback');
+    }
+
+    // Use TextRank as fallback
+    const textRankResult = compressConversation(originalMessages, 0.3);
+    setCompressedMessages(textRankResult);
+    setCompressionMethod('textrank');
+    setIsCompressed(true);
+    setIsCompressing(false);
+  }, [isCompressed, originalMessages]);
+
+  // Messages to display
+  const messages = isCompressed && compressedMessages ? compressedMessages : originalMessages;
 
   if (isLoading) {
     return (
@@ -222,20 +271,31 @@ export const SessionDetail: React.FC<SessionDetailProps> = ({
       </Stack>
 
       {/* Compression indicator */}
-      {isCompressed && (
+      {compressionError && (
+        <MessageBar
+          messageBarType={MessageBarType.warning}
+          onDismiss={() => setCompressionError(null)}
+          styles={{ root: { borderBottom: '1px solid #edebe9' } }}
+        >
+          {compressionError}
+        </MessageBar>
+      )}
+      {isCompressed && compressionMethod && (
         <Stack
           horizontal
           horizontalAlign="center"
           styles={{
             root: {
               padding: '4px 12px',
-              backgroundColor: '#fff4ce',
+              backgroundColor: compressionMethod === 'claude' ? '#e6f4ea' : '#fff4ce',
               borderBottom: '1px solid #edebe9',
             },
           }}
         >
           <Text variant="tiny" styles={{ root: { color: '#605e5c' } }}>
-            Compressed view (assistant responses summarized to ~30%)
+            {compressionMethod === 'claude'
+              ? 'Compressed with Claude AI'
+              : 'Compressed with TextRank (local)'}
           </Text>
         </Stack>
       )}
@@ -277,10 +337,12 @@ export const SessionDetail: React.FC<SessionDetailProps> = ({
           <PrimaryButton text="Save to Workbook" onClick={onSave} />
         )}
         <DefaultButton
-          text={isCompressed ? 'Expand' : 'Compress'}
+          text={isCompressing ? 'Compressing...' : isCompressed ? 'Expand' : 'Compress'}
           iconProps={{ iconName: isCompressed ? 'FullScreen' : 'CollapseContent' }}
-          onClick={() => setIsCompressed(!isCompressed)}
+          onClick={handleCompress}
+          disabled={isCompressing}
         />
+        {isCompressing && <Spinner size={SpinnerSize.small} />}
         <DefaultButton
           text="Delete"
           onClick={onDelete}

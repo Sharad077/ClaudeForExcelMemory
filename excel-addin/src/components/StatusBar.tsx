@@ -1,17 +1,19 @@
 import React from 'react';
-import { Stack, Text, Toggle, Spinner, SpinnerSize } from '@fluentui/react';
+import { Stack, Text, Toggle, Spinner, SpinnerSize, IconButton } from '@fluentui/react';
 import { ProxyStatus } from '../types';
 
 interface StatusBarProps {
   status: ProxyStatus | null;
   isConnecting: boolean;
   onToggleCapture: (enabled: boolean) => void;
+  onOpenSettings: () => void;
 }
 
 export const StatusBar: React.FC<StatusBarProps> = ({
   status,
   isConnecting,
   onToggleCapture,
+  onOpenSettings,
 }) => {
   if (isConnecting) {
     return (
@@ -88,11 +90,20 @@ export const StatusBar: React.FC<StatusBarProps> = ({
           {status.capturing ? 'Capturing' : 'Paused'} · {status.sessionCount} sessions
         </Text>
       </Stack>
-      <Toggle
-        checked={status.capturing}
-        onChange={(_, checked) => onToggleCapture(checked ?? false)}
-        styles={{ root: { marginBottom: 0 } }}
-      />
+      <Stack horizontal verticalAlign="center" tokens={{ childrenGap: 4 }}>
+        <Toggle
+          checked={status.capturing}
+          onChange={(_, checked) => onToggleCapture(checked ?? false)}
+          styles={{ root: { marginBottom: 0 } }}
+        />
+        <IconButton
+          iconProps={{ iconName: 'Settings' }}
+          title="Settings"
+          ariaLabel="Settings"
+          onClick={onOpenSettings}
+          styles={{ root: { width: 28, height: 28 } }}
+        />
+      </Stack>
     </Stack>
   );
 };

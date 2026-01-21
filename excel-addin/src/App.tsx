@@ -4,6 +4,7 @@ import { StatusBar } from './components/StatusBar';
 import { SearchBar } from './components/SearchBar';
 import { SessionList } from './components/SessionList';
 import { SessionDetail } from './components/SessionDetail';
+import { Settings } from './components/Settings';
 import { useSessions } from './hooks/useSessions';
 
 // Initialize Fluent UI icons
@@ -13,6 +14,7 @@ export const App: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState('');
   const [filterMode, setFilterMode] = useState<'all' | 'saved' | 'unsaved'>('all');
   const [showDetail, setShowDetail] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
 
   const {
     proxyStatus,
@@ -109,9 +111,12 @@ export const App: React.FC = () => {
         status={proxyStatus}
         isConnecting={isConnecting}
         onToggleCapture={handleToggleCapture}
+        onOpenSettings={() => setShowSettings(true)}
       />
 
-      {showDetail ? (
+      {showSettings ? (
+        <Settings onClose={() => setShowSettings(false)} />
+      ) : showDetail ? (
         <SessionDetail
           session={selectedSession}
           isLoading={isLoadingDetail}
